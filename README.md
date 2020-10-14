@@ -2,6 +2,9 @@
 
 Simple processor unzipping `.zip` files in the `data/in/files` and storing results in `data/out/files`
 
+**NOTE** The reason for writing this is that the keboola-decompress processor can't handle situations when files in the zipfile 
+contain (back)slash characters, e.g. `\filename.xml`
+
 **Table of contents:**  
   
 [TOC]
