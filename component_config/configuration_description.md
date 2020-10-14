@@ -1,1 +1,1 @@
-Testing configuration description.
+Simple processor unzipping `.zip` files in the `data/in/files` and storing results in `data/out/files`

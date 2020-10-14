@@ -1,1 +1,1 @@
-Testing functional sample extractor for purposes of the python component template. 
+Simple processor unzipping `.zip` files in the `data/in/files` and storing results in `data/out/files`
