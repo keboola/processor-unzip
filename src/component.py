@@ -13,7 +13,7 @@ from pathlib import Path
 from kbc.env_handler import KBCEnvHandler
 
 # configuration variables
-
+EXTRACT_TO_FOLDER = "extract_to_folder"
 
 # #### Keep for debug
 KEY_DEBUG = 'debug'
@@ -29,6 +29,13 @@ def get_files_with_extension(path, extension):
     files = [f for f in glob.glob(path + "/**." + extension, recursive=True)
              if not f.endswith('.manifest') and Path(f).is_file()]
     return files
+
+
+def get_filename_from_path(path, remove_ext=True):
+    if remove_ext:
+        return path.split("/")[-1].split(".")[0]
+    else:
+        return path.split("/")[-1]
 
 
 class Component(KBCEnvHandler):
@@ -64,26 +71,30 @@ class Component(KBCEnvHandler):
 
         in_file_path = os.path.join(self.data_path, 'in', 'files')
 
-        files_7z = get_files_with_extension(in_file_path, "7z")
         files_zip = get_files_with_extension(in_file_path, "zip")
-
         if len(files_zip) > 0:
             logging.info(f"Extracting {len(files_zip)} .zip files.")
+        for file in files_zip:
+            with zipfile.ZipFile(file, 'r') as zip_ref:
+                out_path = self.get_out_path(file)
+                zip_ref.extractall(out_path)
 
+        files_7z = get_files_with_extension(in_file_path, "7z")
         if len(files_7z) > 0:
             logging.info(f"Extracting {len(files_7z)} .7z files.")
-
         for file in files_7z:
+            out_path = self.get_out_path(file)
             archive = py7zr.SevenZipFile(file, mode='r')
-            archive.extractall(path=self.files_out_path)
+            archive.extractall(path=out_path)
             archive.close()
 
-        for f in files_zip:
-            with zipfile.ZipFile(f, 'r') as zip_ref:
-                # zipinfo.filename = do_something_to(zipinfo.filename
-                zip_ref.extractall(self.files_out_path)
-
         logging.info("Extraction finished.")
+
+    def get_out_path(self, filepath):
+        out_path = self.files_out_path
+        if self.cfg_params.get(EXTRACT_TO_FOLDER):
+            out_path = os.path.join(self.files_out_path, get_filename_from_path(filepath))
+        return out_path
 
 
 """
