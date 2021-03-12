@@ -6,8 +6,8 @@ Template Component main class.
 import glob
 import logging
 import os
-import sys
 import zipfile
+import py7zr
 from pathlib import Path
 
 from kbc.env_handler import KBCEnvHandler
@@ -23,6 +23,12 @@ MANDATORY_PARS = []
 MANDATORY_IMAGE_PARS = []
 
 APP_VERSION = '0.0.1'
+
+
+def get_files_with_extension(path, extension):
+    files = [f for f in glob.glob(path + "/**." + extension, recursive=True)
+             if not f.endswith('.manifest') and Path(f).is_file()]
+    return files
 
 
 class Component(KBCEnvHandler):
@@ -49,10 +55,6 @@ class Component(KBCEnvHandler):
         except ValueError as e:
             logging.exception(e)
             exit(1)
-        # ####### EXAMPLE TO REMOVE
-        # intialize instance parameteres
-
-        # ####### EXAMPLE TO REMOVE END
 
     def run(self):
         '''
@@ -60,13 +62,27 @@ class Component(KBCEnvHandler):
         '''
         params = self.cfg_params  # noqa
 
-        params = self.cfg_params  # noqa
-        files = [f for f in glob.glob(os.path.join(self.data_path, 'in', 'files') + "/**.zip", recursive=True)
-                 if not f.endswith('.manifest') and Path(f).is_file()]
-        logging.info(f"Extracting {len(files)} files.")
-        for f in files:
+        in_file_path = os.path.join(self.data_path, 'in', 'files')
+
+        files_7z = get_files_with_extension(in_file_path, "7z")
+        files_zip = get_files_with_extension(in_file_path, "zip")
+
+        if len(files_zip) > 0:
+            logging.info(f"Extracting {len(files_zip)} .zip files.")
+
+        if len(files_7z) > 0:
+            logging.info(f"Extracting {len(files_7z)} .7z files.")
+
+        for file in files_7z:
+            archive = py7zr.SevenZipFile(file, mode='r')
+            archive.extractall(path=self.files_out_path)
+            archive.close()
+
+        for f in files_zip:
             with zipfile.ZipFile(f, 'r') as zip_ref:
+                # zipinfo.filename = do_something_to(zipinfo.filename
                 zip_ref.extractall(self.files_out_path)
+
         logging.info("Extraction finished.")
 
 
@@ -74,12 +90,8 @@ class Component(KBCEnvHandler):
         Main entrypoint
 """
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        debug_arg = sys.argv[1]
-    else:
-        debug_arg = False
     try:
-        comp = Component(debug_arg)
+        comp = Component()
         comp.run()
     except Exception as exc:
         logging.exception(exc)
