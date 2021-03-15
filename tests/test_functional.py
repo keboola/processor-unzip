@@ -63,19 +63,15 @@ class TestFunctional(unittest.TestCase):
         '''
 
         files_expected_path = path.join(test_dir, 'expected', 'data', 'out', 'files')
-        tables_expected_path = path.join(test_dir, 'expected', 'data', 'out', 'tables')
         files_real_path = path.join(test_dir, 'source', 'data', 'out', 'files')
-        tables_real_path = path.join(test_dir, 'source', 'data', 'out', 'tables')
 
         # report differences
         filecmp.dircmp(files_real_path, files_expected_path).report()
 
         out_files_expected = [file for file in os.listdir(files_expected_path) if not file.startswith('.')]
-        out_tables_expected = [file for file in os.listdir(tables_expected_path) if not file.startswith('.')]
         out_files_real = [file for file in os.listdir(files_real_path) if not file.startswith('.')]
-        out_tables_real = [file for file in os.listdir(tables_real_path) if not file.startswith('.')]
 
-        if set(out_files_real) != set(out_files_expected) or set(out_tables_real) != set(out_tables_expected):
+        if set(out_files_real) != set(out_files_expected):
             return "Files do not match"
 
         error = ""
@@ -88,15 +84,10 @@ class TestFunctional(unittest.TestCase):
             errors_files = filecmp.dircmp(files_real_path, files_expected_path).funny_files
 
         mismatch_files = [file for file in mismatch_files if not file.startswith('.')]
-        match, mismatch_tables, errors_tables = filecmp.cmpfiles(tables_real_path, tables_expected_path,
-                                                                 [os.path.basename(f) for f in out_tables_expected])
 
         if mismatch_files or errors_files:
             error += f"Result files {mismatch_files} are different from what expected. Found errors {errors_files}"
 
-        if mismatch_tables or errors_tables:
-            error += f"\n Result tables {mismatch_tables} are different from what expected. " \
-                     f"Found errors {errors_tables}"
 
         return error
 
