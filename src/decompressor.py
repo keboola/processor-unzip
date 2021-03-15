@@ -1,8 +1,6 @@
-import glob
 import zipfile
 import py7zr
 import os
-from pathlib import Path
 
 
 class Decompressor:
