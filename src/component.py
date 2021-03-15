@@ -3,11 +3,10 @@ Template Component main class.
 
 '''
 
-import glob
 import logging
 import os
-import zipfile
-import py7zr
+import glob
+import decompressor as dc
 from pathlib import Path
 from keboola.component import CommonInterface
 
@@ -35,12 +34,6 @@ def get_data_folder_path():
     return data_folder_path
 
 
-def get_files_with_extension(path, extension):
-    files = [f for f in glob.glob(path + "/**." + extension, recursive=True)
-             if not f.endswith('.manifest') and Path(f).is_file()]
-    return files
-
-
 def get_filename_from_path(path, remove_ext=True):
     if remove_ext:
         return path.split("/")[-1].split(".")[0]
@@ -65,6 +58,12 @@ class Component(CommonInterface):
         if self.configuration.parameters.get(KEY_DEBUG):
             self.set_debug_mode()
 
+    def get_out_path(self, filepath):
+        out_path = self.files_out_path
+        if self.configuration.parameters.get(EXTRACT_TO_FOLDER):
+            out_path = os.path.join(self.files_out_path, get_filename_from_path(filepath))
+        return out_path
+
     @staticmethod
     def set_debug_mode():
         logging.getLogger().setLevel(logging.DEBUG)
@@ -76,30 +75,20 @@ class Component(CommonInterface):
         Main execution code
         '''
 
-        files_zip = get_files_with_extension(self.files_in_path, "zip")
-        if len(files_zip) > 0:
-            logging.info(f"Extracting {len(files_zip)} .zip files.")
-        for file in files_zip:
-            with zipfile.ZipFile(file, 'r') as zip_ref:
-                out_path = self.get_out_path(file)
-                zip_ref.extractall(out_path)
+        logging.info("Extraction starting.")
 
-        files_7z = get_files_with_extension(self.files_in_path, "7z")
-        if len(files_7z) > 0:
-            logging.info(f"Extracting {len(files_7z)} .7z files.")
-        for file in files_7z:
-            out_path = self.get_out_path(file)
-            archive = py7zr.SevenZipFile(file, mode='r')
-            archive.extractall(path=out_path)
-            archive.close()
+        in_files = _get_in_files(self.files_in_path)
+
+        for file in in_files:
+            file_out_path = self.get_out_path(file)
+            file_decompressor = dc.Decompressor(file, file_out_path)
+            file_decompressor.decompress()
 
         logging.info("Extraction finished.")
 
-    def get_out_path(self, filepath):
-        out_path = self.files_out_path
-        if self.configuration.parameters.get(EXTRACT_TO_FOLDER):
-            out_path = os.path.join(self.files_out_path, get_filename_from_path(filepath))
-        return out_path
+
+def _get_in_files(path):
+    return glob.glob(os.path.join(path, '*'))
 
 
 """
