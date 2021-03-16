@@ -3,83 +3,100 @@ Template Component main class.
 
 '''
 
-import glob
 import logging
 import os
-import sys
-import zipfile
+import glob
+import decompressor as dc
 from pathlib import Path
-
-from kbc.env_handler import KBCEnvHandler
+from keboola.component import CommonInterface
 
 # configuration variables
-
+EXTRACT_TO_FOLDER = "extract_to_folder"
 
 # #### Keep for debug
 KEY_DEBUG = 'debug'
 
 # list of mandatory parameters => if some is missing, component will fail with readable message on initialization.
-MANDATORY_PARS = []
-MANDATORY_IMAGE_PARS = []
+REQUIRED_PARAMETERS = []
+REQUIRED_IMAGE_PARS = []
 
 APP_VERSION = '0.0.1'
 
 
-class Component(KBCEnvHandler):
+def get_local_data_path():
+    return Path(__file__).resolve().parent.parent.joinpath('data').as_posix()
 
-    def __init__(self, debug=False):
+
+def get_data_folder_path():
+    data_folder_path = None
+    if not os.environ.get('KBC_DATADIR'):
+        data_folder_path = get_local_data_path()
+    return data_folder_path
+
+
+def get_filename_from_path(path, remove_ext=True):
+    if remove_ext:
+        return path.split("/")[-1].split(".")[0]
+    else:
+        return path.split("/")[-1]
+
+
+class Component(CommonInterface):
+    def __init__(self):
         # for easier local project setup
-        default_data_dir = Path(__file__).resolve().parent.parent.joinpath('data').as_posix() \
-            if not os.environ.get('KBC_DATADIR') else None
-
-        KBCEnvHandler.__init__(self, MANDATORY_PARS, log_level=logging.DEBUG if debug else logging.INFO,
-                               data_path=default_data_dir)
-        # override debug from config
-        if self.cfg_params.get(KEY_DEBUG):
-            debug = True
-        if debug:
-            logging.getLogger().setLevel(logging.DEBUG)
-        logging.info('Running version %s', APP_VERSION)
-        logging.info('Loading configuration...')
+        data_folder_path = get_data_folder_path()
+        super().__init__(data_folder_path=data_folder_path)
 
         try:
-            # validation of mandatory parameters. Produces ValueError
-            self.validate_config(MANDATORY_PARS)
-            self.validate_image_parameters(MANDATORY_IMAGE_PARS)
+            # validation of required parameters. Produces ValueError
+            self.validate_configuration(REQUIRED_PARAMETERS)
+            self.validate_image_parameters(REQUIRED_IMAGE_PARS)
         except ValueError as e:
             logging.exception(e)
             exit(1)
-        # ####### EXAMPLE TO REMOVE
-        # intialize instance parameteres
 
-        # ####### EXAMPLE TO REMOVE END
+        if self.configuration.parameters.get(KEY_DEBUG):
+            self.set_debug_mode()
+
+    def get_out_path(self, filepath):
+        out_path = self.files_out_path
+        if self.configuration.parameters.get(EXTRACT_TO_FOLDER):
+            out_path = os.path.join(self.files_out_path, get_filename_from_path(filepath))
+        return out_path
+
+    @staticmethod
+    def set_debug_mode():
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.info('Running version %s', APP_VERSION)
+        logging.info('Loading configuration...')
 
     def run(self):
         '''
         Main execution code
         '''
-        params = self.cfg_params  # noqa
 
-        params = self.cfg_params  # noqa
-        files = [f for f in glob.glob(os.path.join(self.data_path, 'in', 'files') + "/**.zip", recursive=True)
-                 if not f.endswith('.manifest') and Path(f).is_file()]
-        logging.info(f"Extracting {len(files)} files.")
-        for f in files:
-            with zipfile.ZipFile(f, 'r') as zip_ref:
-                zip_ref.extractall(self.files_out_path)
+        logging.info("Extraction starting.")
+
+        in_files = _get_in_files(self.files_in_path)
+
+        for file in in_files:
+            file_out_path = self.get_out_path(file)
+            file_decompressor = dc.Decompressor(file, file_out_path)
+            file_decompressor.decompress()
+
         logging.info("Extraction finished.")
+
+
+def _get_in_files(path):
+    return glob.glob(os.path.join(path, '*'))
 
 
 """
         Main entrypoint
 """
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        debug_arg = sys.argv[1]
-    else:
-        debug_arg = False
     try:
-        comp = Component(debug_arg)
+        comp = Component()
         comp.run()
     except Exception as exc:
         logging.exception(exc)
