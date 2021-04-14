@@ -1,3 +1,4 @@
+https://bitbucket.org/kds_consulting_team/datadirtest/get/1.2.1.zip#egg=datadirtest
 mock
 freezegun
 keboola.component
