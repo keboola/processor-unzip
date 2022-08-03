@@ -8,6 +8,7 @@ import mock
 import os
 from freezegun import freeze_time
 
+import sys
 from component import Component
 
 
