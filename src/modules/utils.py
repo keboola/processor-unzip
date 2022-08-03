@@ -11,7 +11,7 @@ SUPPORTED_FORMATS = [
 ]
 
 
-def gunzip(gzipped_file_name, work_dir):
+def gunzip(gzipped_file_name, work_dir) -> None:
     """gunzip the given gzipped file"""
 
     filename = os.path.split(gzipped_file_name)[-1]
@@ -58,7 +58,7 @@ class Decompressor:
         self.file_path = file_path
         self.file_out_path = file_out_path
 
-    def decompress(self):
+    def decompress(self) -> None:
 
         if self._is_supported_filetype():
             shutil.unpack_archive(self.file_path, self.file_out_path)
@@ -66,7 +66,7 @@ class Decompressor:
         else:
             logging.warning(f"File {self.file_path} cannot be processed: unsupported file type.")
 
-    def _is_supported_filetype(self):
+    def _is_supported_filetype(self) -> bool:
         extension = pathlib.Path(self.file_path).suffix
         if extension not in SUPPORTED_FORMATS:
             extensions = pathlib.Path(self.file_path).suffixes[-2:]

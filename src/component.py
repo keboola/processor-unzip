@@ -52,7 +52,7 @@ class Component(ComponentBase):
         logging.info("Extraction done.")
         FormatRegistrator.unregister_formats()
 
-    def _get_in_files(self):
+    def _get_in_files(self) -> list:
         files = glob.glob(os.path.join(self.files_in_path, "**/*"), recursive=True)
         return [f for f in files if not os.path.isdir(f)]
 
@@ -63,7 +63,7 @@ class Component(ComponentBase):
             out_path = os.path.join(self.files_out_path, relative_dir, filename)
         return out_path
 
-    def _get_filename_from_path(self, file_path, remove_ext=True):
+    def _get_filename_from_path(self, file_path, remove_ext=True) -> [str, str]:
         """
         Get file name while keeping the nested structure.
         :param file_path:
