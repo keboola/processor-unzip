@@ -15,7 +15,7 @@ EXTRACT_TO_FOLDER = 'extract_to_folder'
 
 # list of mandatory parameters => if some is missing,
 # component will fail with readable message on initialization.
-REQUIRED_PARAMETERS = [EXTRACT_TO_FOLDER]
+REQUIRED_PARAMETERS = []
 
 
 class Component(ComponentBase):
@@ -38,8 +38,6 @@ class Component(ComponentBase):
         Main execution code
         """
 
-        # check for missing configuration parameters
-        self.validate_configuration_parameters(REQUIRED_PARAMETERS)
         self.params = self.configuration.parameters
 
         logging.info("Extraction starting.")
