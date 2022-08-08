@@ -8,7 +8,7 @@ import os
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
-from modules.utils import Decompressor, FormatRegistrator
+from decompress import Decompressor
 
 # configuration variables
 EXTRACT_TO_FOLDER = 'extract_to_folder'
@@ -41,14 +41,16 @@ class Component(ComponentBase):
         self.params = self.configuration.parameters
 
         logging.info("Extraction starting.")
-        FormatRegistrator.register_formats()
 
+        d = Decompressor()
         for file in self._get_in_files():
             file_out_path = self._get_out_path(file)
-            Decompressor(file, file_out_path).decompress()
+            d.decompress(file, file_out_path)
 
         logging.info("Extraction done.")
-        FormatRegistrator.unregister_formats()
+
+        # Unregistering formats is here for easier tests writing.
+        d.unregister_formats()
 
     def _get_in_files(self) -> list:
         files = glob.glob(os.path.join(self.files_in_path, "**/*"), recursive=True)
@@ -62,12 +64,6 @@ class Component(ComponentBase):
         return out_path
 
     def _get_filename_from_path(self, file_path, remove_ext=True) -> [str, str]:
-        """
-        Get file name while keeping the nested structure.
-        :param file_path:
-        :param remove_ext:
-        :return:
-        """
         relative_dir = os.path.dirname(file_path).replace(self.files_in_path, '').lstrip('/').lstrip('\\')
         filename = os.path.basename(file_path)
 
