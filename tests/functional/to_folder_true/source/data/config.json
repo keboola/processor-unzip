@@ -1,0 +1,12 @@
+{
+  "storage": {
+    "input": {
+          "files": []
+    }
+  },
+  "parameters": {
+    "extract_to_folder": true
+  },
+  "action":"run",
+  "authorization": {}
+}
