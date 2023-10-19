@@ -1,1 +1,1 @@
-Simple processor unzipping .zip files in the data/in/files and storing results in data/out/files
+Simple processor unzipping files in the data/in/files and storing results in data/out/files. It supports formats '.zip', '.7z', '.tar.bz2', '.tbz2', '.gz', '.tar.gz', '.tgz', '.tar', '.tar.xz' and '.txz'
