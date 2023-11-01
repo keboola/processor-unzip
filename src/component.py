@@ -8,7 +8,7 @@ import os
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
-from decompress import Decompressor
+from decompress import Decompressor, SUPPORTED_FORMATS
 
 # configuration variables
 EXTRACT_TO_FOLDER = 'extract_to_folder'
@@ -44,8 +44,12 @@ class Component(ComponentBase):
 
         d = Decompressor()
         for file in self._get_in_files():
-            file_out_path = self._get_out_path(file)
-            d.decompress(file, file_out_path)
+            file_extension = os.path.splitext(file)[1]
+            if file_extension in SUPPORTED_FORMATS:
+                file_out_path = self._get_out_path(file)
+                d.decompress(file, file_out_path)
+            else:
+                logging.warning(f"Unsupported file {file} will be skipped.")
 
         logging.info("Extraction done.")
 

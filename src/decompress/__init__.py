@@ -1,1 +1,1 @@
-from .decompress import Decompressor  # noqa
+from .decompress import Decompressor, SUPPORTED_FORMATS  # noqa
