@@ -48,6 +48,8 @@ class Component(ComponentBase):
             if file_extension in SUPPORTED_FORMATS:
                 file_out_path = self._get_out_path(file)
                 d.decompress(file, file_out_path)
+            else:
+                logging.warning(f"Unsupported file {file} will be skipped.")
 
         logging.info("Extraction done.")
 
