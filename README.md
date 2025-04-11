@@ -33,12 +33,14 @@ contain (back)slash characters, e.g. `\filename.xml`
         "component": "kds-team.processor-unzip"
     },
     "parameters": {
-        "extract_to_folder" : true
+        "extract_to_folder" : true,
+        "7zip_password" : "password"
     }
 }
 ```
 - **extract_to_folder** - boolean to indicate if zipped folders should be extracted to folders within `data/out/files`
   or if files within the zipped folder should be added directly to the `data/out/files`
+- **7zip_password** [OPTIONAL] - password for 7zip files.
 ## Development
 
 If required, change local data folder (the `CUSTOM_FOLDER` placeholder) path to your custom path in the docker-compose file:
