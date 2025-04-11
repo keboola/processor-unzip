@@ -4,7 +4,9 @@ import re
 import shutil
 
 import gzip
-from py7zr import unpack_7zarchive
+
+from keboola.component import UserException
+from py7zr import SevenZipFile
 
 SUPPORTED_FORMATS = [
     ".7z", ".tar.bz2", ".tbz2", ".gz", ".tar.gz", ".tgz", ".tar", ".tar.xz", ".txz", ".zip"
@@ -25,11 +27,21 @@ def gunzip(gzipped_file_name, work_dir) -> None:
             shutil.copyfileobj(f_in, f_out)
 
 
+def unpack_7zarchive(archive_path: str, extract_dir: str, password: str = None) -> None:
+    os.makedirs(extract_dir, exist_ok=True)
+    with SevenZipFile(archive_path, mode='r', password=password) as archive:
+        archive.extractall(path=extract_dir)
+
+
 class Decompressor:
-    def __init__(self):
+    def __init__(self, password: str = None):
+        self.password = password
+
+        # Use a single function with optional password parameter
         shutil.register_unpack_format("7zip",
                                       [".7z"],
-                                      unpack_7zarchive,
+                                      lambda filepath, extract_dir:
+                                      unpack_7zarchive(filepath, extract_dir, self.password),
                                       description="7zip archive")
 
         shutil.register_unpack_format("gz", [".gz", ], gunzip)
@@ -46,7 +58,10 @@ class Decompressor:
         """
 
         if self._is_supported_filetype(file_path):
-            shutil.unpack_archive(file_path, file_out_path)
+            try:
+                shutil.unpack_archive(file_path, file_out_path)
+            except Exception as e:
+                raise UserException(f"File {file_path} cannot be processed: {str(e)}")
         else:
             raise Exception(f"File {file_path} cannot be processed: unsupported file type.")
 
