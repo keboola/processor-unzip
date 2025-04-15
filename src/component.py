@@ -12,7 +12,7 @@ from decompress import Decompressor, SUPPORTED_FORMATS
 
 # configuration variables
 EXTRACT_TO_FOLDER = 'extract_to_folder'
-PASSWORD_7Z = 'password_7z'
+PASSWORD_7Z = '#password_7z'
 
 # list of mandatory parameters => if some is missing,
 # component will fail with readable message on initialization.
