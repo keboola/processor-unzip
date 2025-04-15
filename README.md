@@ -34,13 +34,15 @@ contain (back)slash characters, e.g. `\filename.xml`
     },
     "parameters": {
         "extract_to_folder" : true,
-        "7zip_password" : "password"
+        "#password_7z" : "password"
     }
 }
 ```
+
 - **extract_to_folder** - boolean to indicate if zipped folders should be extracted to folders within `data/out/files`
   or if files within the zipped folder should be added directly to the `data/out/files`
-- **7zip_password** [OPTIONAL] - password for 7zip files.
+- **#password_7z** [OPTIONAL] - password for 7zip files.
+
 ## Development
 
 If required, change local data folder (the `CUSTOM_FOLDER` placeholder) path to your custom path in the docker-compose file:
