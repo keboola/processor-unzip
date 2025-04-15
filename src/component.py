@@ -13,6 +13,7 @@ from decompress import Decompressor, SUPPORTED_FORMATS
 # configuration variables
 EXTRACT_TO_FOLDER = 'extract_to_folder'
 PASSWORD_7Z = '#password_7z'
+DUMMY_PARAM = '#dummy_param'
 
 # list of mandatory parameters => if some is missing,
 # component will fail with readable message on initialization.
@@ -40,6 +41,8 @@ class Component(ComponentBase):
         """
 
         self.params = self.configuration.parameters
+
+        logging.info(f"Dummy param: {self.params.get(DUMMY_PARAM)}")
 
         logging.info("Extraction starting.")
 
