@@ -2,14 +2,26 @@ import os
 import pathlib
 import re
 import shutil
-
 import gzip
+import zlib
 
+import snappy
 from keboola.component import UserException
 from py7zr import SevenZipFile
 
 SUPPORTED_FORMATS = [
-    ".7z", ".tar.bz2", ".tbz2", ".gz", ".tar.gz", ".tgz", ".tar", ".tar.xz", ".txz", ".zip"
+    ".7z",
+    ".tar.bz2",
+    ".tbz2",
+    ".gz",
+    ".zlib",
+    ".tar.gz",
+    ".tgz",
+    ".tar",
+    ".tar.xz",
+    ".txz",
+    ".zip",
+    ".snappy",
 ]
 
 
@@ -22,15 +34,48 @@ def gunzip(gzipped_file_name, work_dir) -> None:
     if not os.path.exists(work_dir):
         os.makedirs(work_dir)
 
-    with gzip.open(gzipped_file_name, 'rb') as f_in:
-        with open(os.path.join(work_dir, filename), 'wb') as f_out:
+    with gzip.open(gzipped_file_name, "rb") as f_in:
+        with open(os.path.join(work_dir, filename), "wb") as f_out:
             shutil.copyfileobj(f_in, f_out)
 
 
 def unpack_7zarchive(archive_path: str, extract_dir: str, password: str = None) -> None:
     os.makedirs(extract_dir, exist_ok=True)
-    with SevenZipFile(archive_path, mode='r', password=password) as archive:
+    with SevenZipFile(archive_path, mode="r", password=password) as archive:
         archive.extractall(path=extract_dir)
+
+
+def unpack_snappy(archive_path: str, extract_dir: str) -> None:
+    os.makedirs(extract_dir, exist_ok=True)
+    with open(archive_path, "rb") as f_in:
+        data = f_in.read()
+        try:
+            decompressor = snappy.StreamDecompressor()
+            decompressed_data = decompressor.decompress(data)
+
+        except snappy.UncompressError:
+            decompressed_data = snappy.decompress(data)
+
+    with open(os.path.join(extract_dir, os.path.basename(archive_path)), "wb") as f_out:
+        f_out.write(decompressed_data)
+
+
+def unpack_zlib(zlib_file_name, work_dir) -> None:
+    filename = os.path.split(zlib_file_name)[-1]
+    filename = re.sub(r"\.zlib$", "", filename, flags=re.IGNORECASE)
+
+    if not os.path.exists(work_dir):
+        os.makedirs(work_dir)
+
+    out_path = os.path.join(work_dir, filename)
+
+    with open(zlib_file_name, "rb") as f_in, open(out_path, "wb") as f_out:
+        compressed_data = f_in.read()
+        try:
+            decompressed = zlib.decompress(compressed_data, wbits=zlib.MAX_WBITS)
+        except zlib.error as e:
+            raise UserException(f"Zlib decompression failed: {e}")
+        f_out.write(decompressed)
 
 
 class Decompressor:
@@ -38,15 +83,18 @@ class Decompressor:
         self.password = password
 
         # Use a single function with optional password parameter
-        shutil.register_unpack_format("7zip",
-                                      [".7z"],
-                                      lambda filepath, extract_dir:
-                                      unpack_7zarchive(filepath, extract_dir, self.password),
-                                      description="7zip archive")
+        shutil.register_unpack_format(
+            "7zip",
+            [".7z"],
+            lambda filepath, extract_dir: unpack_7zarchive(filepath, extract_dir, self.password),
+            description="7zip archive",
+        )
 
-        shutil.register_unpack_format("gz", [".gz", ], gunzip)
+        shutil.register_unpack_format("gz", [".gz"], gunzip)
+        shutil.register_unpack_format("snappy", [".snappy"], unpack_snappy)
+        shutil.register_unpack_format("zlib", [".zlib"], unpack_zlib)
 
-    def decompress(self, file_path, file_out_path) -> None:
+    def run_decompressor(self, file_path, file_out_path) -> None:
         """
         If the file in file_path is of supported type, unzips the file into file_out_path.
         Args:
@@ -93,3 +141,5 @@ class Decompressor:
         """
         shutil.unregister_unpack_format("7zip")
         shutil.unregister_unpack_format("gz")
+        shutil.unregister_unpack_format("snappy")
+        shutil.unregister_unpack_format("zlib")
