@@ -48,7 +48,7 @@ class Component(ComponentBase):
 
         d = Decompressor(password=password)
         for file in self._get_in_files():
-            file_extension = os.path.splitext(file)[1]
+            file_extension = os.path.splitext(file)[-1]
             if file_extension in SUPPORTED_FORMATS:
                 file_out_path = self._get_out_path(file)
                 d.run_decompressor(file, file_out_path)

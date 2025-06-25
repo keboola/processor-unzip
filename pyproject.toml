@@ -1,0 +1,20 @@
+[project]
+name = "processor-unzip"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "datadirtest",
+    "freezegun>=1.5.2",
+    "keboola-component>=1.6.10",
+    "mock>=5.2.0",
+    "py7zr>=1.0.0",
+    "python-snappy>=0.7.3",
+]
+
+[tool.uv.sources]
+datadirtest = { url = "https://bitbucket.org/kds_consulting_team/datadirtest/get/1.5.1.zip" }
+
+[tool.ruff]
+line-length = 120
