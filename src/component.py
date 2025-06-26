@@ -14,6 +14,7 @@ from decompress import Decompressor, SUPPORTED_FORMATS
 # configuration variables
 EXTRACT_TO_FOLDER = "extract_to_folder"
 PASSWORD_7Z = "#password_7z"
+GRACEFUL = "graceful"
 
 # list of mandatory parameters => if some is missing,
 # component will fail with readable message on initialization.
@@ -45,13 +46,21 @@ class Component(ComponentBase):
         logging.info("Extraction starting.")
 
         password = self.params.get(PASSWORD_7Z)
+        graceful = self.params.get(GRACEFUL)
 
         d = Decompressor(password=password)
         for file in self._get_in_files():
             file_extension = os.path.splitext(file)[-1]
             if file_extension in SUPPORTED_FORMATS:
                 file_out_path = self._get_out_path(file)
-                d.run_decompressor(file, file_out_path)
+                try:
+                    d.run_decompressor(file, file_out_path)
+
+                except Exception as e:
+                    if graceful:
+                        logging.error(f"Error processing file {file}: {e}")
+                    else:
+                        raise UserException(f"Error processing file {file}: {e}")
             else:
                 logging.warning(f"Unsupported file {file} will be skipped.")
 

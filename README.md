@@ -13,6 +13,7 @@ Simple processor unzipping files in the `data/in/files` and storing results in `
 - .tar.xz
 - .txz
 - .zip
+- .zlib
 
 **NOTE** The reason for writing this is that the keboola-decompress processor can't handle situations when files in the zipfile 
 contain (back)slash characters, e.g. `\filename.xml`
