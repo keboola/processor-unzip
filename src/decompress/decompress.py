@@ -1,5 +1,4 @@
 import os
-import pathlib
 import re
 import shutil
 import gzip
@@ -8,7 +7,7 @@ import zlib
 from keboola.component import UserException
 from py7zr import SevenZipFile
 
-SUPPORTED_FORMATS = [".7z", ".tar.bz2", ".tbz2", ".gz", ".zlib", ".tar.gz", ".tgz", ".tar", ".tar.xz", ".txz", ".zip"]
+SUPPORTED_FORMATS = [".zip", ".7z", ".gz", ".tar", ".tar.bz2", ".tar.gz", ".tar.xz", ".tbz2", ".tgz", ".txz", ".zlib"]
 
 
 def gunzip(gz_file_path, extract_dir) -> None:
@@ -64,7 +63,7 @@ class Decompressor:
         shutil.register_unpack_format("gz", [".gz"], gunzip)
         shutil.register_unpack_format("zlib", [".zlib"], unpack_zlib)
 
-    def run_decompressor(self, file_path, file_out_path) -> None:
+    def run_decompressor(self, file_path, file_out_path) -> bool | tuple[bool, str]:
         """
         If the file in file_path is of supported type, unzips the file into file_out_path.
         Args:
@@ -74,33 +73,16 @@ class Decompressor:
         Returns:
             None
         """
-
-        if self._is_supported_filetype(file_path):
+        if any(file_path.endswith(ext) for ext in SUPPORTED_FORMATS):
             try:
                 shutil.unpack_archive(file_path, file_out_path)
+                return True
+
             except Exception as e:
                 raise UserException(f"File {file_path} cannot be processed: {str(e)}")
+
         else:
-            raise Exception(f"File {file_path} cannot be processed: unsupported file type.")
-
-    @staticmethod
-    def _is_supported_filetype(file_path) -> bool:
-        """
-        Returns True/False based on filetypes defined in SUPPORTED_FORMATS.
-        Args:
-            file_path: Path of the file to unzip.
-
-        Returns:
-            bool
-
-        """
-        extension = pathlib.Path(file_path).suffix
-        if extension not in SUPPORTED_FORMATS:
-            extensions = pathlib.Path(file_path).suffixes[-2:]
-            extension = "".join(extensions)
-            if extension not in SUPPORTED_FORMATS:
-                return False
-        return True
+            return False, f"File {file_path} cannot be processed: unsupported file type."
 
     @staticmethod
     def unregister_formats() -> None:
