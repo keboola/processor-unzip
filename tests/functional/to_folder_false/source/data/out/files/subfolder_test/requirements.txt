@@ -3,4 +3,3 @@ mock
 freezegun
 keboola.component
 py7zr
-python-snappy
