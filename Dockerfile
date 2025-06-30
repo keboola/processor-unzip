@@ -7,7 +7,6 @@ COPY uv.lock .
 
 ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
 RUN uv sync --all-groups --frozen
-RUN uv add flake8
 
 COPY src/ src
 COPY tests/ tests
