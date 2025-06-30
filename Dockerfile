@@ -2,6 +2,7 @@ FROM python:3.13-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /code/
+RUN uv add flake8
 COPY flake8.cfg .
 COPY pyproject.toml .
 COPY uv.lock .
