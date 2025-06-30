@@ -102,9 +102,16 @@ class Decompressor:
                     )
 
         else:
-            logging.warning(
-                f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}\nSkipping..."
-            )
+            if self.graceful:
+                logging.warning(
+                    f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                    "\nSkipping..."
+                )
+            else:
+                raise UserException(
+                    f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                    "\nIf you want to skip unsupported files, set the 'graceful' parameter to true."
+                )
 
     @staticmethod
     def unregister_formats() -> None:
