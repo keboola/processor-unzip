@@ -17,3 +17,8 @@ datadirtest = { url = "https://bitbucket.org/kds_consulting_team/datadirtest/get
 
 [tool.ruff]
 line-length = 120
+
+[dependency-groups]
+dev = [
+    "flake8>=7.3.0",
+]
