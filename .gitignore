@@ -8,8 +8,9 @@ __MACOSX
 /example/.project
 /example/.pydevproject
 
-
+# ruff
+.ruff_cache/
 
 # kbc datafolder
 /data
-/venv
+/.venv

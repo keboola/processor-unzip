@@ -20,6 +20,12 @@ env:
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }} # recommended for pushing to ECR
   KBC_DEVELOPERPORTAL_PASSWORD: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
 
+  # Variables for replacing Decompress processor
+  KBC_DEVELOPERPORTAL_APP_DECOMPRESS: "keboola.processor-decompress"
+  KBC_DEVELOPERPORTAL_VENDOR_DECOMPRESS: "keboola"
+  KBC_DEVELOPERPORTAL_USERNAME_DECOMPRESS: "keboola+unzip_to_decompress_migration"
+  KBC_DEVELOPERPORTAL_PASSWORD_DECOMPRESS: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD_DECOMPRESS }}
+
   # (Optional) Test KBC project: https://connection.keboola.com/admin/projects/0000
   KBC_TEST_PROJECT_CONFIGS: "" # space separated list of config ids
   KBC_STORAGE_TOKEN: ${{ secrets.KBC_STORAGE_TOKEN }} # required for running KBC tests
@@ -193,6 +199,17 @@ jobs:
           push_latest: ${{ needs.push_event_info.outputs.is_deploy_ready }}
           source_image: ${{ env.KBC_DEVELOPERPORTAL_APP }}
 
+      - name: Push image to ECR - Decompress processor
+        uses: keboola/action-push-to-ecr@master
+        with:
+          vendor: ${{ env.KBC_DEVELOPERPORTAL_VENDOR_DECOMPRESS }}
+          app_id: ${{ env.KBC_DEVELOPERPORTAL_APP_DECOMPRESS }}
+          username: ${{ env.KBC_DEVELOPERPORTAL_USERNAME_DECOMPRESS }}
+          password: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD_DECOMPRESS }}
+          tag: ${{ needs.push_event_info.outputs.app_image_tag }}
+          push_latest: ${{ needs.push_event_info.outputs.is_deploy_ready }}
+          source_image: ${{ env.KBC_DEVELOPERPORTAL_APP }}
+
   deploy:
     name: Deploy to KBC
     env:
@@ -211,6 +228,15 @@ jobs:
           app_id: ${{ env.KBC_DEVELOPERPORTAL_APP }}
           username: ${{ env.KBC_DEVELOPERPORTAL_USERNAME }}
           password: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
+          tag: ${{ needs.push_event_info.outputs.app_image_tag }}
+
+      - name: Set Developer Portal Tag - Decompress processor
+        uses: keboola/action-set-tag-developer-portal@master
+        with:
+          vendor: ${{ env.KBC_DEVELOPERPORTAL_VENDOR_DECOMPRESS }}
+          app_id: ${{ env.KBC_DEVELOPERPORTAL_APP_DECOMPRESS }}
+          username: ${{ env.KBC_DEVELOPERPORTAL_USERNAME_DECOMPRESS }}
+          password: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD_DECOMPRESS }}
           tag: ${{ needs.push_event_info.outputs.app_image_tag }}
 
   update_developer_portal_properties:

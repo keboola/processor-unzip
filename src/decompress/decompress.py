@@ -1,52 +1,83 @@
 import os
-import pathlib
 import re
 import shutil
-
 import gzip
+import zlib
+import logging
 
 from keboola.component import UserException
 from py7zr import SevenZipFile
 
 SUPPORTED_FORMATS = [
-    ".7z", ".tar.bz2", ".tbz2", ".gz", ".tar.gz", ".tgz", ".tar", ".tar.xz", ".txz", ".zip"
+    ".zip",
+    ".7z",
+    ".gz",
+    ".tar",
+    ".tar.bz2",
+    ".tar.gz",
+    ".tar.xz",
+    ".tbz2",
+    ".tgz",
+    ".txz",
+    ".zlib",
 ]
 
 
-def gunzip(gzipped_file_name, work_dir) -> None:
+def gunzip(gz_file_path, extract_dir) -> None:
     """gunzip the given gzipped file"""
 
-    filename = os.path.split(gzipped_file_name)[-1]
-    filename = re.sub(r"\.gz$", "", filename, flags=re.IGNORECASE)
+    base_filename = os.path.split(gz_file_path)[-1]
+    out_filename = re.sub(r"\.gz$", "", base_filename, flags=re.IGNORECASE)
 
-    if not os.path.exists(work_dir):
-        os.makedirs(work_dir)
+    if not os.path.exists(extract_dir):
+        os.makedirs(extract_dir)
 
-    with gzip.open(gzipped_file_name, 'rb') as f_in:
-        with open(os.path.join(work_dir, filename), 'wb') as f_out:
+    with gzip.open(gz_file_path, "rb") as f_in:
+        with open(os.path.join(extract_dir, out_filename), "wb") as f_out:
             shutil.copyfileobj(f_in, f_out)
 
 
 def unpack_7zarchive(archive_path: str, extract_dir: str, password: str = None) -> None:
     os.makedirs(extract_dir, exist_ok=True)
-    with SevenZipFile(archive_path, mode='r', password=password) as archive:
+    with SevenZipFile(archive_path, mode="r", password=password) as archive:
         archive.extractall(path=extract_dir)
 
 
+def unpack_zlib(zlib_file_path, extract_dir) -> None:
+    base_filename = os.path.split(zlib_file_path)[-1]
+    out_filename = re.sub(r"\.zlib$", "", base_filename, flags=re.IGNORECASE)
+
+    if not os.path.exists(extract_dir):
+        os.makedirs(extract_dir)
+
+    out_path = os.path.join(extract_dir, out_filename)
+
+    with open(zlib_file_path, "rb") as f_in, open(out_path, "wb") as f_out:
+        compressed_data = f_in.read()
+        try:
+            decompressed_data = zlib.decompress(compressed_data, wbits=zlib.MAX_WBITS)
+        except zlib.error as e:
+            raise UserException(f"Zlib decompression failed: {e}")
+        f_out.write(decompressed_data)
+
+
 class Decompressor:
-    def __init__(self, password: str = None):
+    def __init__(self, password: str = None, graceful: bool = False):
         self.password = password
+        self.graceful = graceful
 
         # Use a single function with optional password parameter
-        shutil.register_unpack_format("7zip",
-                                      [".7z"],
-                                      lambda filepath, extract_dir:
-                                      unpack_7zarchive(filepath, extract_dir, self.password),
-                                      description="7zip archive")
+        shutil.register_unpack_format(
+            "7zip",
+            [".7z"],
+            lambda filepath, extract_dir: unpack_7zarchive(filepath, extract_dir, self.password),
+            description="7zip archive",
+        )
 
-        shutil.register_unpack_format("gz", [".gz", ], gunzip)
+        shutil.register_unpack_format("gz", [".gz"], gunzip)
+        shutil.register_unpack_format("zlib", [".zlib"], unpack_zlib)
 
-    def decompress(self, file_path, file_out_path) -> None:
+    def run_decompressor(self, file_path, file_out_path) -> None:
         """
         If the file in file_path is of supported type, unzips the file into file_out_path.
         Args:
@@ -56,33 +87,31 @@ class Decompressor:
         Returns:
             None
         """
-
-        if self._is_supported_filetype(file_path):
+        if any(file_path.endswith(ext) for ext in SUPPORTED_FORMATS):
             try:
                 shutil.unpack_archive(file_path, file_out_path)
+
             except Exception as e:
-                raise UserException(f"File {file_path} cannot be processed: {str(e)}")
+                if self.graceful:
+                    logging.warning(f"Unpacking of {file_path} ended with error: {e} \nContinuing...")
+                else:
+                    raise UserException(
+                        f"Unpacking of {file_path} ended with error: {e} "
+                        "\nIf you want to continue with processors run on failure, "
+                        "set the 'graceful' parameter to true."
+                    )
+
         else:
-            raise Exception(f"File {file_path} cannot be processed: unsupported file type.")
-
-    @staticmethod
-    def _is_supported_filetype(file_path) -> bool:
-        """
-        Returns True/False based on filetypes defined in SUPPORTED_FORMATS.
-        Args:
-            file_path: Path of the file to unzip.
-
-        Returns:
-            bool
-
-        """
-        extension = pathlib.Path(file_path).suffix
-        if extension not in SUPPORTED_FORMATS:
-            extensions = pathlib.Path(file_path).suffixes[-2:]
-            extension = "".join(extensions)
-            if extension not in SUPPORTED_FORMATS:
-                return False
-        return True
+            if self.graceful:
+                logging.warning(
+                    f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                    "\nSkipping..."
+                )
+            else:
+                raise UserException(
+                    f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                    "\nIf you want to skip unsupported files, set the 'graceful' parameter to true."
+                )
 
     @staticmethod
     def unregister_formats() -> None:
@@ -93,3 +122,4 @@ class Decompressor:
         """
         shutil.unregister_unpack_format("7zip")
         shutil.unregister_unpack_format("gz")
+        shutil.unregister_unpack_format("zlib")

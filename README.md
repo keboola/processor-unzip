@@ -13,12 +13,13 @@ Simple processor unzipping files in the `data/in/files` and storing results in `
 - .tar.xz
 - .txz
 - .zip
+- .zlib
 
-**NOTE** The reason for writing this is that the keboola-decompress processor can't handle situations when files in the zipfile 
+**NOTE** The reason for writing this is that the keboola-decompress processor can't handle situations when files in the zipfile
 contain (back)slash characters, e.g. `\filename.xml`
 
-**Table of contents:**  
-  
+**Table of contents:**
+
 [TOC]
 
 
@@ -34,7 +35,8 @@ contain (back)slash characters, e.g. `\filename.xml`
     },
     "parameters": {
         "extract_to_folder" : true,
-        "#password_7z" : "password"
+        "#password_7z" : "password",
+        "graceful": true
     }
 }
 ```
@@ -42,6 +44,7 @@ contain (back)slash characters, e.g. `\filename.xml`
 - **extract_to_folder** - boolean to indicate if zipped folders should be extracted to folders within `data/out/files`
   or if files within the zipped folder should be added directly to the `data/out/files`
 - **#password_7z** [OPTIONAL] - password for 7zip files.
+- **graceful** - inherited from decompress processor. If `true` processor will continue if encounter a unpacking error or unsupported format, otherwise the processor run fail. Default value is `false`
 
 ## Development
 
@@ -70,4 +73,4 @@ docker-compose run --rm test
 
 # Integration
 
-For information about deployment and integration with KBC, please refer to the [deployment section of developers documentation](https://developers.keboola.com/extend/component/deployment/) 
+For information about deployment and integration with KBC, please refer to the [deployment section of developers documentation](https://developers.keboola.com/extend/component/deployment/)

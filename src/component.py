@@ -2,17 +2,19 @@
 Template Component main class.
 
 """
+
 import logging
 import glob
 import os
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
-from decompress import Decompressor, SUPPORTED_FORMATS
+from decompress import Decompressor
 
 # configuration variables
-EXTRACT_TO_FOLDER = 'extract_to_folder'
-PASSWORD_7Z = '#password_7z'
+EXTRACT_TO_FOLDER = "extract_to_folder"
+PASSWORD_7Z = "#password_7z"
+GRACEFUL = "graceful"
 
 # list of mandatory parameters => if some is missing,
 # component will fail with readable message on initialization.
@@ -21,13 +23,13 @@ REQUIRED_PARAMETERS = []
 
 class Component(ComponentBase):
     """
-        Extends base class for general Python components. Initializes the CommonInterface
-        and performs configuration validation.
+    Extends base class for general Python components. Initializes the CommonInterface
+    and performs configuration validation.
 
-        For easier debugging the data folder is picked up by default from `../data` path,
-        relative to working directory.
+    For easier debugging the data folder is picked up by default from `../data` path,
+    relative to working directory.
 
-        If `debug` parameter is present in the `config.json`, the default logger is set to verbose DEBUG mode.
+    If `debug` parameter is present in the `config.json`, the default logger is set to verbose DEBUG mode.
     """
 
     def __init__(self):
@@ -44,15 +46,12 @@ class Component(ComponentBase):
         logging.info("Extraction starting.")
 
         password = self.params.get(PASSWORD_7Z)
+        graceful = self.params.get(GRACEFUL)
 
-        d = Decompressor(password=password)
+        d = Decompressor(password=password, graceful=graceful)
         for file in self._get_in_files():
-            file_extension = os.path.splitext(file)[1]
-            if file_extension in SUPPORTED_FORMATS:
-                file_out_path = self._get_out_path(file)
-                d.decompress(file, file_out_path)
-            else:
-                logging.warning(f"Unsupported file {file} will be skipped.")
+            file_out_path = self._get_out_path(file)
+            d.run_decompressor(file, file_out_path)
 
         logging.info("Extraction done.")
 
@@ -70,8 +69,8 @@ class Component(ComponentBase):
             out_path = os.path.join(self.files_out_path, relative_dir, filename)
         return out_path
 
-    def _get_filename_from_path(self, file_path, remove_ext=True) -> [str, str]:
-        relative_dir = os.path.dirname(file_path).replace(self.files_in_path, '').lstrip('/').lstrip('\\')
+    def _get_filename_from_path(self, file_path, remove_ext=True) -> tuple[str]:
+        relative_dir = os.path.dirname(file_path).replace(self.files_in_path, "").lstrip("/").lstrip("\\")
         filename = os.path.basename(file_path)
 
         if remove_ext:
