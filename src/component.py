@@ -48,20 +48,10 @@ class Component(ComponentBase):
         password = self.params.get(PASSWORD_7Z)
         graceful = self.params.get(GRACEFUL)
 
-        d = Decompressor(password=password)
+        d = Decompressor(password=password, graceful=graceful)
         for file in self._get_in_files():
             file_out_path = self._get_out_path(file)
-            try:
-                done = d.run_decompressor(file, file_out_path)
-
-            except Exception as e:
-                if graceful:
-                    logging.warning(f"Error processing file {file}: {e}")
-                else:
-                    raise UserException(f"Error processing file {file}: {e}")
-
-            if not done:
-                logging.warning(f"Error processing file {file}: {done[1]}")
+            d.run_decompressor(file, file_out_path)
 
         logging.info("Extraction done.")
 

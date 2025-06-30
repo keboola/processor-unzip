@@ -3,11 +3,24 @@ import re
 import shutil
 import gzip
 import zlib
+import logging
 
 from keboola.component import UserException
 from py7zr import SevenZipFile
 
-SUPPORTED_FORMATS = [".zip", ".7z", ".gz", ".tar", ".tar.bz2", ".tar.gz", ".tar.xz", ".tbz2", ".tgz", ".txz", ".zlib"]
+SUPPORTED_FORMATS = [
+    ".zip",
+    ".7z",
+    ".gz",
+    ".tar",
+    ".tar.bz2",
+    ".tar.gz",
+    ".tar.xz",
+    ".tbz2",
+    ".tgz",
+    ".txz",
+    ".zlib",
+]
 
 
 def gunzip(gz_file_path, extract_dir) -> None:
@@ -49,8 +62,9 @@ def unpack_zlib(zlib_file_path, extract_dir) -> None:
 
 
 class Decompressor:
-    def __init__(self, password: str = None):
+    def __init__(self, password: str = None, graceful: bool = False):
         self.password = password
+        self.graceful = graceful
 
         # Use a single function with optional password parameter
         shutil.register_unpack_format(
@@ -63,7 +77,7 @@ class Decompressor:
         shutil.register_unpack_format("gz", [".gz"], gunzip)
         shutil.register_unpack_format("zlib", [".zlib"], unpack_zlib)
 
-    def run_decompressor(self, file_path, file_out_path) -> bool | tuple[bool, str]:
+    def run_decompressor(self, file_path, file_out_path) -> None:
         """
         If the file in file_path is of supported type, unzips the file into file_out_path.
         Args:
@@ -76,13 +90,28 @@ class Decompressor:
         if any(file_path.endswith(ext) for ext in SUPPORTED_FORMATS):
             try:
                 shutil.unpack_archive(file_path, file_out_path)
-                return True
 
             except Exception as e:
-                raise UserException(f"File {file_path} cannot be processed: {str(e)}")
+                if self.graceful:
+                    logging.warning(f"Unpacking of {file_path} ended with error: {e} \nContinuing...")
+                else:
+                    raise UserException(
+                        f"Unpacking of {file_path} ended with error: {e} "
+                        "\nIf you want to continue with processors run on failure, "
+                        "set the 'graceful' parameter to true."
+                    )
 
         else:
-            return False, f"File {file_path} cannot be processed: unsupported file type."
+            if self.graceful:
+                logging.warning(
+                    f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                    "\nSkipping..."
+                )
+            else:
+                raise UserException(
+                    f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                    "\nIf you want to skip unsupported files, set the 'graceful' parameter to true."
+                )
 
     @staticmethod
     def unregister_formats() -> None:
