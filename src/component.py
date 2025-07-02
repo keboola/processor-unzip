@@ -15,6 +15,7 @@ from decompress import Decompressor
 EXTRACT_TO_FOLDER = "extract_to_folder"
 PASSWORD_7Z = "#password_7z"
 GRACEFUL = "graceful"
+COMPRESSION_TYPE = "compression_type"
 
 # list of mandatory parameters => if some is missing,
 # component will fail with readable message on initialization.
@@ -45,27 +46,30 @@ class Component(ComponentBase):
 
         logging.info("Extraction starting.")
 
+        to_folder = self.params.get(EXTRACT_TO_FOLDER, True)
         password = self.params.get(PASSWORD_7Z)
         graceful = self.params.get(GRACEFUL)
+        compression_type = self.params.get(COMPRESSION_TYPE)
 
         d = Decompressor(password=password, graceful=graceful)
-        for file in self._get_in_files():
-            file_out_path = self._get_out_path(file)
-            d.run_decompressor(file, file_out_path)
+        try:
+            for file in self._get_in_files():
+                file_out_path = self._get_out_path(file, to_folder)
+                d.run_decompressor(file, file_out_path, compression_type)
+        finally:
+            # Unregistering formats is here for easier tests writing.
+            d.unregister_formats()
 
         logging.info("Extraction done.")
-
-        # Unregistering formats is here for easier tests writing.
-        d.unregister_formats()
 
     def _get_in_files(self) -> list:
         files = glob.glob(os.path.join(self.files_in_path, "**/*"), recursive=True)
         return [f for f in files if not os.path.isdir(f)]
 
-    def _get_out_path(self, filepath) -> str:
+    def _get_out_path(self, filepath, to_folder) -> str:
         filename, relative_dir = self._get_filename_from_path(filepath)
         out_path = os.path.join(self.files_out_path, relative_dir)
-        if self.params.get(EXTRACT_TO_FOLDER):
+        if to_folder:
             out_path = os.path.join(self.files_out_path, relative_dir, filename)
         return out_path
 

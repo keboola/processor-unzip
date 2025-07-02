@@ -66,18 +66,29 @@ class Decompressor:
         self.password = password
         self.graceful = graceful
 
-        # Use a single function with optional password parameter
-        shutil.register_unpack_format(
-            "7zip",
-            [".7z"],
-            lambda filepath, extract_dir: unpack_7zarchive(filepath, extract_dir, self.password),
-            description="7zip archive",
-        )
+        # Safely register formats - handle already registered formats
+        try:
+            shutil.register_unpack_format(
+                "7zip",
+                [".7z"],
+                lambda filepath, extract_dir: unpack_7zarchive(filepath, extract_dir, self.password),
+                description="7zip archive",
+            )
+        except shutil.RegistryError:
+            # Format already registered, that's fine
+            pass
 
-        shutil.register_unpack_format("gz", [".gz"], gunzip)
-        shutil.register_unpack_format("zlib", [".zlib"], unpack_zlib)
+        try:
+            shutil.register_unpack_format("gz", [".gz"], gunzip)
+        except shutil.RegistryError:
+            pass
 
-    def run_decompressor(self, file_path, file_out_path) -> None:
+        try:
+            shutil.register_unpack_format("zlib", [".zlib"], unpack_zlib)
+        except shutil.RegistryError:
+            pass
+
+    def run_decompressor(self, file_path, file_out_path, compression_type=None) -> None:
         """
         If the file in file_path is of supported type, unzips the file into file_out_path.
         Args:
@@ -87,7 +98,9 @@ class Decompressor:
         Returns:
             None
         """
-        if any(file_path.endswith(ext) for ext in SUPPORTED_FORMATS):
+        has_supported_format = any(file_path.endswith(ext) for ext in SUPPORTED_FORMATS)
+
+        if has_supported_format or compression_type:
             try:
                 shutil.unpack_archive(file_path, file_out_path)
 
@@ -120,6 +133,17 @@ class Decompressor:
         This exists for easier test writing because shutil returns RegistryError
         when trying to register already registered format.
         """
-        shutil.unregister_unpack_format("7zip")
-        shutil.unregister_unpack_format("gz")
-        shutil.unregister_unpack_format("zlib")
+        try:
+            shutil.unregister_unpack_format("7zip")
+        except KeyError:
+            pass  # Format not registered, that's fine
+
+        try:
+            shutil.unregister_unpack_format("gz")
+        except KeyError:
+            pass
+
+        try:
+            shutil.unregister_unpack_format("zlib")
+        except KeyError:
+            pass
