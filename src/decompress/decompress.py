@@ -43,7 +43,7 @@ def unpack_7zarchive(archive_path: str, extract_dir: str, password: str = None) 
         archive.extractall(path=extract_dir)
 
 
-def unpack_zlib(zlib_file_path, extract_dir) -> None:
+def unpack_zlib(zlib_file_path, extract_dir, zlib_window_size: None) -> None:
     base_filename = os.path.split(zlib_file_path)[-1]
     out_filename = re.sub(r"\.zlib$", "", base_filename, flags=re.IGNORECASE)
 
@@ -55,16 +55,19 @@ def unpack_zlib(zlib_file_path, extract_dir) -> None:
     with open(zlib_file_path, "rb") as f_in, open(out_path, "wb") as f_out:
         compressed_data = f_in.read()
         try:
-            decompressed_data = zlib.decompress(compressed_data, wbits=zlib.MAX_WBITS)
+            wbits = zlib_window_size if zlib_window_size else zlib.MAX_WBITS
+            decompressed_data = zlib.decompress(compressed_data, wbits=wbits)
         except zlib.error as e:
             raise UserException(f"Zlib decompression failed: {e}")
         f_out.write(decompressed_data)
 
 
 class Decompressor:
-    def __init__(self, password: str = None, graceful: bool = False):
-        self.password = password
-        self.graceful = graceful
+    def __init__(self, **kwargs):
+        self.password = kwargs.get("password")
+        self.graceful = kwargs.get("graceful")
+        self.zlib_window_size = kwargs.get("zlib_window_size")
+        self.is_unzip = kwargs.get("is_unzip")
 
         # Safely register formats - handle already registered formats
         try:
@@ -79,16 +82,20 @@ class Decompressor:
             pass
 
         try:
-            shutil.register_unpack_format("gz", [".gz"], gunzip)
+            shutil.register_unpack_format("gz", [".gz"], lambda filepath, extract_dir: gunzip(filepath, extract_dir))
         except shutil.RegistryError:
             pass
 
         try:
-            shutil.register_unpack_format("zlib", [".zlib"], unpack_zlib)
+            shutil.register_unpack_format(
+                "zlib",
+                [".zlib"],
+                lambda filepath, extract_dir: unpack_zlib(filepath, extract_dir, self.zlib_window_size),
+            )
         except shutil.RegistryError:
             pass
 
-    def run_decompressor(self, file_path, file_out_path, compression_type=None) -> None:
+    def run_decompressor(self, file_path: str, file_out_path: str, compression_type: str = None) -> None:
         """
         If the file in file_path is of supported type, unzips the file into file_out_path.
         Args:
@@ -105,8 +112,15 @@ class Decompressor:
                 shutil.unpack_archive(file_path, file_out_path)
 
             except Exception as e:
-                if self.graceful:
-                    logging.warning(f"Unpacking of {file_path} ended with error: {e} \nContinuing...")
+                if self.graceful is not None:
+                    if self.graceful is not None:
+                        logging.warning(f"Unpacking of {file_path} ended with error: {e} \nContinuing...")
+                    else:
+                        raise UserException(
+                            f"Unpacking of {file_path} ended with error: {e} "
+                            "\nIf you want to continue with processors run on failure, "
+                            "set the 'graceful' parameter to true."
+                        )
                 else:
                     raise UserException(
                         f"Unpacking of {file_path} ended with error: {e} "
@@ -115,16 +129,28 @@ class Decompressor:
                     )
 
         else:
-            if self.graceful:
-                logging.warning(
-                    f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
-                    "\nSkipping..."
-                )
+            if self.graceful is not None:
+                if self.graceful:
+                    logging.warning(
+                        f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                        "\nSkipping..."
+                    )
+                else:
+                    raise UserException(
+                        f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                        "\nIf you want to skip unsupported files, set the 'graceful' parameter to true."
+                    )
             else:
-                raise UserException(
-                    f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
-                    "\nIf you want to skip unsupported files, set the 'graceful' parameter to true."
-                )
+                if self.is_unzip:
+                    logging.warning(
+                        f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                        "\nSkipping..."
+                    )
+                else:
+                    raise UserException(
+                        f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+                        "\nIf you want to skip unsupported files, set the 'graceful' parameter to true."
+                    )
 
     @staticmethod
     def unregister_formats() -> None:

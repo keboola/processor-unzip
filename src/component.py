@@ -1,25 +1,12 @@
-"""
-Template Component main class.
-
-"""
-
 import logging
 import glob
 import os
 
 from keboola.component.base import ComponentBase
 from keboola.component.exceptions import UserException
+
 from decompress import Decompressor
-
-# configuration variables
-EXTRACT_TO_FOLDER = "extract_to_folder"
-PASSWORD_7Z = "#password_7z"
-GRACEFUL = "graceful"
-COMPRESSION_TYPE = "compression_type"
-
-# list of mandatory parameters => if some is missing,
-# component will fail with readable message on initialization.
-REQUIRED_PARAMETERS = []
+from configuration import UnzipConfiguration, DecompressConfiguration
 
 
 class Component(ComponentBase):
@@ -42,19 +29,48 @@ class Component(ComponentBase):
         Main execution code
         """
 
-        self.params = self.configuration.parameters
+        # Set parameters based on component ID (kds-team.processor-unzip/keboola.processor-decompress)
+        if self.environment_variables.get("KBC_COMPONENTID") == "kds-team.processor-unzip":
+            self.params = UnzipConfiguration(**self.configuration.parameters)
+
+            # Indicator for decompress class
+            is_unzip = True
+
+            # Parameters for unzip processor
+            password = self.params.password_7z if hasattr(self.params, "password_7z") else None
+            to_folder = self.params.extract_to_folder if hasattr(self.params, "extract_to_folder") else False
+
+            # Initialize parameters that are not used in unzip processor
+            graceful = None
+            compression_type = None
+            zlib_window_size = None
+
+            # Varibles for enabling default unzip behavior
+            remove_ext = True
+
+        else:
+            self.params = DecompressConfiguration(**self.configuration.parameters)
+
+            is_unzip = False
+
+            # Parameters for decompress processor
+            graceful = self.params.graceful if hasattr(self.params, "graceful") else False
+            compression_type = self.params.compression_type if hasattr(self.params, "compression_type") else None
+            zlib_window_size = self.params.zlib_window_size if hasattr(self.params, "zlib_window_size") else 15
+
+            # Initialize parameters that are not used in decompress processor
+            password = None
+            to_folder = True
+
+            # Varibles for enabling default decompress behavior
+            remove_ext = False
 
         logging.info("Extraction starting.")
 
-        to_folder = self.params.get(EXTRACT_TO_FOLDER, True)
-        password = self.params.get(PASSWORD_7Z)
-        graceful = self.params.get(GRACEFUL)
-        compression_type = self.params.get(COMPRESSION_TYPE)
-
-        d = Decompressor(password=password, graceful=graceful)
+        d = Decompressor(password=password, graceful=graceful, zlib_window_size=zlib_window_size, is_unzip=is_unzip)
         try:
             for file in self._get_in_files():
-                file_out_path = self._get_out_path(file, to_folder)
+                file_out_path = self._get_out_path(file, to_folder, remove_ext)
                 d.run_decompressor(file, file_out_path, compression_type)
         finally:
             # Unregistering formats is here for easier tests writing.
@@ -66,14 +82,14 @@ class Component(ComponentBase):
         files = glob.glob(os.path.join(self.files_in_path, "**/*"), recursive=True)
         return [f for f in files if not os.path.isdir(f)]
 
-    def _get_out_path(self, filepath, to_folder) -> str:
-        filename, relative_dir = self._get_filename_from_path(filepath)
+    def _get_out_path(self, filepath, to_folder, remove_ext) -> str:
+        filename, relative_dir = self._get_filename_from_path(filepath, remove_ext)
         out_path = os.path.join(self.files_out_path, relative_dir)
         if to_folder:
             out_path = os.path.join(self.files_out_path, relative_dir, filename)
         return out_path
 
-    def _get_filename_from_path(self, file_path, remove_ext=True) -> tuple[str]:
+    def _get_filename_from_path(self, file_path, remove_ext) -> tuple[str]:
         relative_dir = os.path.dirname(file_path).replace(self.files_in_path, "").lstrip("/").lstrip("\\")
         filename = os.path.basename(file_path)
 
