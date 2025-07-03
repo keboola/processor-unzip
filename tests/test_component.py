@@ -24,7 +24,7 @@ class TestComponent(unittest.TestCase):
             comp = Component()
             comp.run()
 
-    @mock.patch.dict(os.environ, {"KBC_COMPONENTID": "keboola.processor-decompress"})
+    @mock.patch.dict(os.environ, {"KBC_COMPONENTID": "keboola.processor-decompress", "KBC_DATADIR": "/tmp"})
     @mock.patch.object(
         Component, "configuration", mock.PropertyMock(return_value=mock.Mock(parameters={"compression_type": "zip"}))
     )
