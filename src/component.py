@@ -22,56 +22,63 @@ class Component(ComponentBase):
 
     def __init__(self):
         super().__init__()
-        self.params = None
+
+        # Sets parameters based on component ID (kds-team.processor-unzip/keboola.processor-decompress)
+        if self.environment_variables.component_id == "kds-team.processor-unzip":
+            self.params = UnzipConfiguration(**self.configuration.parameters)
+
+            # Indicator for decompress class
+            self.is_unzip = True
+
+            # Parameters for unzip processor
+            self.password = self.params.password_7z if hasattr(self.params, "password_7z") else None
+            self.to_folder = self.params.extract_to_folder if hasattr(self.params, "extract_to_folder") else False
+
+            # Initialize parameters that are not used in unzip processor
+            self.graceful = None
+            self.compression_type = None
+            self.zlib_window_size = None
+
+            # Varibles for enabling default unzip behavior
+            self.remove_ext = True
+
+        else:
+            self.params = DecompressConfiguration(**self.configuration.parameters)
+
+            self.is_unzip = False
+
+            # Parameters for decompress processor
+            self.graceful = self.params.graceful if hasattr(self.params, "graceful") else False
+            self.compression_type = self.params.compression_type if hasattr(self.params, "compression_type") else None
+            self.zlib_window_size = self.params.zlib_window_size if hasattr(self.params, "zlib_window_size") else 15
+
+            # Initialize parameters that are not used in decompress processor
+            self.password = None
+
+            # Varibles for enabling default decompress behavior
+            self.remove_ext = False
+            self.to_folder = True
+
+        logging.info("Extraction starting.")
 
     def run(self):
         """
         Main execution code
         """
-
-        # Set parameters based on component ID (kds-team.processor-unzip/keboola.processor-decompress)
-        if self.environment_variables.get("KBC_COMPONENTID") == "kds-team.processor-unzip":
-            self.params = UnzipConfiguration(**self.configuration.parameters)
-
-            # Indicator for decompress class
-            is_unzip = True
-
-            # Parameters for unzip processor
-            password = self.params.password_7z if hasattr(self.params, "password_7z") else None
-            to_folder = self.params.extract_to_folder if hasattr(self.params, "extract_to_folder") else False
-
-            # Initialize parameters that are not used in unzip processor
-            graceful = None
-            compression_type = None
-            zlib_window_size = None
-
-            # Varibles for enabling default unzip behavior
-            remove_ext = True
-
-        else:
-            self.params = DecompressConfiguration(**self.configuration.parameters)
-
-            is_unzip = False
-
-            # Parameters for decompress processor
-            graceful = self.params.graceful if hasattr(self.params, "graceful") else False
-            compression_type = self.params.compression_type if hasattr(self.params, "compression_type") else None
-            zlib_window_size = self.params.zlib_window_size if hasattr(self.params, "zlib_window_size") else 15
-
-            # Initialize parameters that are not used in decompress processor
-            password = None
-            to_folder = True
-
-            # Varibles for enabling default decompress behavior
-            remove_ext = False
-
-        logging.info("Extraction starting.")
-
-        d = Decompressor(password=password, graceful=graceful, zlib_window_size=zlib_window_size, is_unzip=is_unzip)
+        d = Decompressor(
+            password=self.password,
+            graceful=self.graceful,
+            zlib_window_size=self.zlib_window_size,
+            is_unzip=self.is_unzip,
+        )
         try:
             for file in self._get_in_files():
-                file_out_path = self._get_out_path(file, to_folder, remove_ext)
-                d.run_decompressor(file, file_out_path, compression_type)
+                file_out_path = self._get_out_path(file, self.to_folder, self.remove_ext)
+
+                if file.endswith(".manifest"):
+                    continue
+
+                d.run_decompressor(file, file_out_path, self.compression_type)
         finally:
             # Unregistering formats is here for easier tests writing.
             d.unregister_formats()

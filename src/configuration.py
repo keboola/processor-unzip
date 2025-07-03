@@ -1,6 +1,6 @@
 import logging
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 
 class ConfigurationException(Exception):
@@ -29,4 +29,14 @@ class UnzipConfiguration(Configuration):
 class DecompressConfiguration(Configuration):
     graceful: bool = Field(title="Graceful mode", default=False)
     compression_type: str = Field(title="Compression type", default=None)
-    zlib_window_size: int = Field(title="Zlib window size", default=15, ge=8, le=15)
+    zlib_window_size: int = Field(title="Zlib window size", default=15)
+
+    @field_validator("zlib_window_size")
+    def validate_zlib_window_size(cls, v):
+        if v == 0:
+            return v  # 0 is valid (automatic detection)
+        if -15 <= v <= -8:
+            return v  # Raw deflate format
+        if 8 <= v <= 15:
+            return v  # Standard zlib format
+        raise ValueError("zlib_window_size must be 0, or in range -15 to -8 (raw deflate), or 8 to 15 (standard zlib)")

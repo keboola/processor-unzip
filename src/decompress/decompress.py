@@ -113,7 +113,7 @@ class Decompressor:
 
             except Exception as e:
                 if self.graceful is not None:
-                    if self.graceful is not None:
+                    if self.graceful:
                         logging.warning(f"Unpacking of {file_path} ended with error: {e} \nContinuing...")
                     else:
                         raise UserException(

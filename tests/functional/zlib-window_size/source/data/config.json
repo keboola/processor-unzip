@@ -1,6 +1,0 @@
-{
-  "parameters": {
-    "compression_type": "zlib",
-    "zlib_window_size": -15
-  }
-}
