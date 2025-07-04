@@ -11,6 +11,7 @@ dependencies = [
     "mock>=5.2.0",
     "py7zr>=1.0.0",
     "pydantic>=2.11.7",
+    "python-snappy>=0.7.3",
 ]
 
 [tool.uv.sources]

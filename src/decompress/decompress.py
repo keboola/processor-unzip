@@ -22,6 +22,8 @@ SUPPORTED_FORMATS = [
     ".zlib",
 ]
 
+# TODO: Implement support for .deflate, .snappy files and fix .zlib files (window size)
+
 
 def gunzip(gz_file_path, extract_dir) -> None:
     """gunzip the given gzipped file"""
@@ -106,51 +108,59 @@ class Decompressor:
             None
         """
         has_supported_format = any(file_path.endswith(ext) for ext in SUPPORTED_FORMATS)
+        should_decompress = compression_type or has_supported_format
 
-        if has_supported_format or compression_type:
-            try:
+        if not should_decompress:
+            self._handle_unsupported_format(file_path)
+            return
+
+        try:
+            if compression_type:
+                # if compression_type == "gzip":
+                #     shutil.unpack_archive(file_path, file_out_path, format="gz")
+                shutil.unpack_archive(file_path, file_out_path, format=compression_type)
+            else:
                 shutil.unpack_archive(file_path, file_out_path)
 
-            except Exception as e:
-                if self.graceful is not None:
-                    if self.graceful:
-                        logging.warning(f"Unpacking of {file_path} ended with error: {e} \nContinuing...")
-                    else:
-                        raise UserException(
-                            f"Unpacking of {file_path} ended with error: {e} "
-                            "\nIf you want to continue with processors run on failure, "
-                            "set the 'graceful' parameter to true."
-                        )
-                else:
-                    raise UserException(
-                        f"Unpacking of {file_path} ended with error: {e} "
-                        "\nIf you want to continue with processors run on failure, "
-                        "set the 'graceful' parameter to true."
-                    )
+        except Exception as e:
+            self._handle_decompression_error(file_path, e)
 
-        else:
-            if self.graceful is not None:
-                if self.graceful:
-                    logging.warning(
-                        f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
-                        "\nSkipping..."
-                    )
-                else:
-                    raise UserException(
-                        f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
-                        "\nIf you want to skip unsupported files, set the 'graceful' parameter to true."
-                    )
+    def _handle_decompression_error(self, file_path: str, error: Exception) -> None:
+        """Handle decompression errors based on graceful setting"""
+        error_message = (
+            f"Unpacking of {file_path} ended with error: {error} "
+            "\nIf you want to continue with processors run on failure, "
+            "set the 'graceful' parameter to true."
+        )
+
+        if self.graceful is not None:
+            if self.graceful:
+                logging.warning(f"Unpacking of {file_path} ended with error: {error} \nContinuing...")
             else:
-                if self.is_unzip:
-                    logging.warning(
-                        f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
-                        "\nSkipping..."
-                    )
-                else:
-                    raise UserException(
-                        f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
-                        "\nIf you want to skip unsupported files, set the 'graceful' parameter to true."
-                    )
+                raise UserException(error_message)
+        else:
+            raise UserException(error_message)
+
+    def _handle_unsupported_format(self, file_path: str) -> None:
+        """Handle unsupported file format based on graceful setting"""
+        warning_message = (
+            f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}\nSkipping..."
+        )
+        error_message = (
+            f"Unsupported file format for file {file_path}. Supported formats are: {SUPPORTED_FORMATS}"
+            "\nIf you want to skip unsupported files, set the 'graceful' parameter to true."
+        )
+
+        if self.graceful is not None:
+            if self.graceful:
+                logging.warning(warning_message)
+            else:
+                raise UserException(error_message)
+        else:
+            if self.is_unzip:
+                logging.warning(warning_message)
+            else:
+                raise UserException(error_message)
 
     @staticmethod
     def unregister_formats() -> None:

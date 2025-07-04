@@ -59,12 +59,12 @@ class Component(ComponentBase):
             self.remove_ext = False
             self.to_folder = True
 
-        logging.info("Extraction starting.")
-
     def run(self):
         """
         Main execution code
         """
+        logging.info("Extraction starting.")
+
         d = Decompressor(
             password=self.password,
             graceful=self.graceful,
@@ -75,7 +75,7 @@ class Component(ComponentBase):
             for file in self._get_in_files():
                 file_out_path = self._get_out_path(file, self.to_folder, self.remove_ext)
 
-                if file.endswith(".manifest"):
+                if file.lower().endswith(".manifest"):
                     continue
 
                 d.run_decompressor(file, file_out_path, self.compression_type)
@@ -85,7 +85,7 @@ class Component(ComponentBase):
 
         logging.info("Extraction done.")
 
-    def _get_in_files(self) -> list:
+    def _get_in_files(self) -> list[str]:
         files = glob.glob(os.path.join(self.files_in_path, "**/*"), recursive=True)
         return [f for f in files if not os.path.isdir(f)]
 
