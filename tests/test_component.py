@@ -12,6 +12,7 @@ from freezegun import freeze_time
 
 from component import Component
 from keboola.component.exceptions import UserException
+from configuration import ConfigurationException
 
 
 class TestComponent(unittest.TestCase):
@@ -24,12 +25,17 @@ class TestComponent(unittest.TestCase):
             comp = Component()
             comp.run()
 
-    @mock.patch.dict(os.environ, {"KBC_COMPONENTID": "keboola.processor-decompress", "KBC_DATADIR": "/tmp"})
     @mock.patch.object(
-        Component, "configuration", mock.PropertyMock(return_value=mock.Mock(parameters={"compression_type": "zip"}))
+        Component, "configuration", mock.PropertyMock(return_value=mock.Mock(parameters={"zlib_window_size": "1000"}))
     )
-    def test_decompress_invalid_zip_file(self):
-        # Create a temporary file that's not a valid zip
+    def test_decompress_invalid_zlib_window_size(self):
+        with self.assertRaises(ConfigurationException):
+            comp = Component()
+            comp.run()
+
+    def _test_invalid_compression_file(self):
+        """Helper method to test invalid compression files"""
+        # Create a temporary file that's not a valid compressed file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as temp_file:
             temp_file.write('"val1","val2"\n')
             temp_file_path = temp_file.name
@@ -44,6 +50,27 @@ class TestComponent(unittest.TestCase):
         finally:
             # Clean up the temp file
             os.unlink(temp_file_path)
+
+    @mock.patch.dict(os.environ, {"KBC_COMPONENTID": "keboola.processor-decompress", "KBC_DATADIR": "/tmp"})
+    @mock.patch.object(
+        Component, "configuration", mock.PropertyMock(return_value=mock.Mock(parameters={"compression_type": "zip"}))
+    )
+    def test_decompress_invalid_zip_file(self):
+        self._test_invalid_compression_file()
+
+    @mock.patch.dict(os.environ, {"KBC_COMPONENTID": "keboola.processor-decompress", "KBC_DATADIR": "/tmp"})
+    @mock.patch.object(
+        Component, "configuration", mock.PropertyMock(return_value=mock.Mock(parameters={"compression_type": "gzip"}))
+    )
+    def test_decompress_invalid_gzip_file(self):
+        self._test_invalid_compression_file()
+
+    @mock.patch.dict(os.environ, {"KBC_COMPONENTID": "keboola.processor-decompress", "KBC_DATADIR": "/tmp"})
+    @mock.patch.object(
+        Component, "configuration", mock.PropertyMock(return_value=mock.Mock(parameters={"compression_type": "snappy"}))
+    )
+    def test_decompress_invalid_snappy_file(self):
+        self._test_invalid_compression_file()
 
 
 if __name__ == "__main__":
