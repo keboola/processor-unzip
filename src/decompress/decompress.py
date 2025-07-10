@@ -178,8 +178,10 @@ class Decompressor:
             if compression_type:
                 compression_type = "gz" if compression_type == "gzip" else compression_type
                 shutil.unpack_archive(file_path, file_out_path, format=compression_type)
+                logging.info(f"Unpacked {file_path} with specified compression type: {compression_type}")
             else:
                 shutil.unpack_archive(file_path, file_out_path)
+                logging.info(f"Unpacked {file_path} with detected format: {file_path.split('.')[-1]}")
 
         except Exception as e:
             self._handle_decompression_error(file_path, e)
