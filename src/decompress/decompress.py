@@ -5,7 +5,7 @@ import gzip
 import zlib
 import logging
 
-import snappy
+from snappy import StreamDecompressor
 from keboola.component import UserException
 from py7zr import SevenZipFile
 
@@ -49,6 +49,7 @@ def unpack_snappy(snappy_file_path, extract_dir) -> None:
     """Decompress snappy compressed file with format detection"""
     base_filename = os.path.split(snappy_file_path)[-1]
     out_filename = re.sub(r"\.snappy$", "", base_filename, flags=re.IGNORECASE)
+    decompressor = StreamDecompressor()
 
     if not os.path.exists(extract_dir):
         os.makedirs(extract_dir)
@@ -57,38 +58,11 @@ def unpack_snappy(snappy_file_path, extract_dir) -> None:
 
     with open(snappy_file_path, "rb") as f_in, open(out_path, "wb") as f_out:
         compressed_data = f_in.read()
+        decompressed_data = decompressor.decompress(compressed_data)
+        decompressed_data += decompressor.flush()
 
-        # Try different snappy formats
-        decompressed_data = None
-        errors = []
-
-        # Try framed snappy (default)
-        try:
-            decompressed_data = snappy.uncompress(compressed_data, as_raw=False)
-        except Exception as e:
-            errors.append(e)
-
-            # If framed fails, try raw snappy
-            try:
-                decompressed_data = snappy.uncompress(compressed_data, as_raw=True)
-            except Exception as e2:
-                errors.append(e2)
-
-                # If both formats fail, try stream decompression
-                try:
-                    decompressor = snappy.StreamDecompressor()
-                    decompressed_data = decompressor.decompress(compressed_data)
-                    decompressed_data += decompressor.flush()
-                except Exception as stream_error:
-                    errors.append(stream_error)
-
-        # If all methods failed, raise exception
-        if decompressed_data is None:
-            raise UserException(
-                f"Failed to decompress snappy file {snappy_file_path}. "
-                f"Tried framed, raw, and stream formats. "
-                f"Each error: {'\n'.join(str(error) for error in errors)}"
-            )
+        if decompressed_data is None or len(decompressed_data) == 0:
+            raise UserException(f"Failed to decompress snappy file: {snappy_file_path}")
 
         f_out.write(decompressed_data)
 

@@ -238,7 +238,7 @@ requires-dist = [
     { name = "mock", specifier = ">=5.2.0" },
     { name = "py7zr", specifier = ">=1.0.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
-    { name = "python-snappy", specifier = ">=0.7.3" },
+    { name = "python-snappy", specifier = "==0.7.2" },
 ]
 
 [package.metadata.requires-dev]
@@ -438,14 +438,14 @@ wheels = [
 
 [[package]]
 name = "python-snappy"
-version = "0.7.3"
+version = "0.7.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cramjam" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/39/66/9185fbb6605ba92716d9f77fbb13c97eb671cd13c3ad56bd154016fbf08b/python_snappy-0.7.3.tar.gz", hash = "sha256:40216c1badfb2d38ac781ecb162a1d0ec40f8ee9747e610bcfefdfa79486cee3", size = 9337, upload_time = "2024-08-29T13:16:05.705Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/52/acd87583175fa930e4385f8a6164eb5909acd683c0e62ee01d41de8195a2/python_snappy-0.7.2.tar.gz", hash = "sha256:04bf182f9d9f67b7a846dae2f1df36180ceeee8d3380e4b6799deff5272c4978", size = 9108, upload_time = "2024-06-20T13:53:08.946Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/86/c1/0ee413ddd639aebf22c85d6db39f136ccc10e6a4b4dd275a92b5c839de8d/python_snappy-0.7.3-py3-none-any.whl", hash = "sha256:074c0636cfcd97e7251330f428064050ac81a52c62ed884fc2ddebbb60ed7f50", size = 9155, upload_time = "2024-08-29T13:16:04.773Z" },
+    { url = "https://files.pythonhosted.org/packages/56/94/b478bb228059988dfe32fae9d678af57a8aff0d90be5a329d766d3b7cf17/python_snappy-0.7.2-py3-none-any.whl", hash = "sha256:b4b2c39142064925d5a554672a09de4188fc4f2b2494a2ecb35042930e129444", size = 8868, upload_time = "2024-06-20T13:53:07.774Z" },
 ]
 
 [[package]]
