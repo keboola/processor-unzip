@@ -13,10 +13,10 @@ env:
   KBC_DEVELOPERPORTAL_PASSWORD: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD }}
 
   # Variables for replacing Decompress processor
-  # KBC_DEVELOPERPORTAL_APP_DECOMPRESS: "keboola.processor-decompress"
-  # KBC_DEVELOPERPORTAL_VENDOR_DECOMPRESS: "keboola"
-  # KBC_DEVELOPERPORTAL_USERNAME_DECOMPRESS: "keboola+unzip_to_decompress_migration"
-  # KBC_DEVELOPERPORTAL_PASSWORD_DECOMPRESS: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD_DECOMPRESS }}
+  KBC_DEVELOPERPORTAL_APP_DECOMPRESS: "keboola.processor-decompress"
+  KBC_DEVELOPERPORTAL_VENDOR_DECOMPRESS: "keboola"
+  KBC_DEVELOPERPORTAL_USERNAME_DECOMPRESS: "keboola+unzip_to_decompress_migration"
+  KBC_DEVELOPERPORTAL_PASSWORD_DECOMPRESS: ${{ secrets.KBC_DEVELOPERPORTAL_PASSWORD_DECOMPRESS }}
 
   # (Optional) Test KBC project: https://connection.keboola.com/admin/projects/0000
   KBC_TEST_PROJECT_CONFIGS: "" # space separated list of config ids
