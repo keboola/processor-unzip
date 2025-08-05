@@ -5,7 +5,7 @@ import gzip
 import zlib
 import logging
 
-from snappy import StreamDecompressor
+from snappy import StreamDecompressor, uncompress
 from keboola.component import UserException
 from py7zr import SevenZipFile
 
@@ -62,8 +62,11 @@ def unpack_snappy(snappy_file_path, extract_dir) -> None:
 
     with open(snappy_file_path, "rb") as f_in, open(out_path, "wb") as f_out:
         compressed_data = f_in.read()
-        decompressed_data = decompressor.decompress(compressed_data)
-        decompressed_data += decompressor.flush()
+        if compressed_data.startswith(b"\xff\x06\x00\x00sNaPpY"):
+            decompressed_data = decompressor.decompress(compressed_data)
+            decompressed_data += decompressor.flush()
+        else:
+            decompressed_data = uncompress(compressed_data)
 
         if decompressed_data is None or len(decompressed_data) == 0:
             raise UserException(f"Failed to decompress snappy file: {snappy_file_path}")
