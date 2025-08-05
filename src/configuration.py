@@ -29,7 +29,7 @@ class UnzipConfiguration(Configuration):
 class DecompressConfiguration(Configuration):
     graceful: bool = Field(title="Graceful mode", default=False)
     compression_type: str = Field(title="Compression type", default=None)
-    zlib_window_size: int = Field(title="Zlib window size", default=15)
+    zlib_window_size: int = Field(title="Zlib window size", default=None)
 
     @field_validator("zlib_window_size")
     def validate_zlib_window_size(cls, v):

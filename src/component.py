@@ -50,7 +50,7 @@ class Component(ComponentBase):
             # Parameters for decompress processor
             self.graceful = self.params.graceful if hasattr(self.params, "graceful") else False
             self.compression_type = self.params.compression_type if hasattr(self.params, "compression_type") else None
-            self.zlib_window_size = self.params.zlib_window_size if hasattr(self.params, "zlib_window_size") else 15
+            self.zlib_window_size = self.params.zlib_window_size if hasattr(self.params, "zlib_window_size") else None
 
             # Initialize parameters that are not used in decompress processor
             self.password = None

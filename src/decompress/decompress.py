@@ -22,9 +22,11 @@ SUPPORTED_FORMATS = [
     ".txz",
     ".zlib",
     ".snappy",
+    ".deflate",
 ]
 
 
+# gzip
 def gunzip(gz_file_path, extract_dir) -> None:
     """gunzip the given gzipped file"""
 
@@ -39,12 +41,14 @@ def gunzip(gz_file_path, extract_dir) -> None:
             shutil.copyfileobj(f_in, f_out)
 
 
+# 7zip
 def unpack_7zarchive(archive_path: str, extract_dir: str, password: str = None) -> None:
     os.makedirs(extract_dir, exist_ok=True)
     with SevenZipFile(archive_path, mode="r", password=password) as archive:
         archive.extractall(path=extract_dir)
 
 
+# snappy
 def unpack_snappy(snappy_file_path, extract_dir) -> None:
     """Decompress snappy compressed file with format detection"""
     base_filename = os.path.split(snappy_file_path)[-1]
@@ -67,17 +71,31 @@ def unpack_snappy(snappy_file_path, extract_dir) -> None:
         f_out.write(decompressed_data)
 
 
-def unpack_zlib_generic(file_path, extract_dir, wbits: int = None) -> None:
+# zlib/deflate
+def _detect_zlib_wrapper(data: bytes):
+    if data.startswith(b"\x78"):
+        return "zlib"
+    else:
+        return "deflate"
+
+
+def _get_wbits(wrapper: str):
+    if wrapper == "zlib":
+        return zlib.MAX_WBITS  # 15
+    elif wrapper == "deflate":
+        return -zlib.MAX_WBITS  # -15
+    else:
+        raise ValueError("Failed to set wbits value: Unknown archive type")
+
+
+def unpack_zlib_generic(file_path, extract_dir, inp_wbits: int = None) -> None:
     """Generic function to decompress zlib/deflate compressed files"""
     base_filename = os.path.split(file_path)[-1]
-
-    # Determine output filename based on input extension
     if file_path.lower().endswith(".zlib"):
         out_filename = re.sub(r"\.zlib$", "", base_filename, flags=re.IGNORECASE)
     elif file_path.lower().endswith(".deflate"):
         out_filename = re.sub(r"\.deflate$", "", base_filename, flags=re.IGNORECASE)
     else:
-        # Fallback - remove any extension
         out_filename = os.path.splitext(base_filename)[0]
 
     if not os.path.exists(extract_dir):
@@ -87,21 +105,10 @@ def unpack_zlib_generic(file_path, extract_dir, wbits: int = None) -> None:
 
     with open(file_path, "rb") as f_in, open(out_path, "wb") as f_out:
         compressed_data = f_in.read()
+        wrapper = _detect_zlib_wrapper(compressed_data)
+        wbits = inp_wbits if inp_wbits else _get_wbits(wrapper)
         decompressed_data = zlib.decompress(compressed_data, wbits=wbits)
         f_out.write(decompressed_data)
-
-
-def unpack_zlib(zlib_file_path, extract_dir, zlib_window_size: None) -> None:
-    """Decompress zlib compressed file"""
-    wbits = zlib_window_size if zlib_window_size else zlib.MAX_WBITS
-    unpack_zlib_generic(zlib_file_path, extract_dir, wbits)
-
-
-def unpack_deflate(deflate_file_path, extract_dir, zlib_window_size: None) -> None:
-    """Decompress deflate compressed file using raw deflate format"""
-    wbits = zlib_window_size if zlib_window_size else zlib.MAX_WBITS
-    wbits = wbits * -1 if wbits > 0 else wbits
-    unpack_zlib_generic(deflate_file_path, extract_dir, wbits=wbits)
 
 
 class Decompressor:
@@ -132,7 +139,7 @@ class Decompressor:
             shutil.register_unpack_format(
                 "zlib",
                 [".zlib"],
-                lambda filepath, extract_dir: unpack_zlib(filepath, extract_dir, self.zlib_window_size),
+                lambda filepath, extract_dir: unpack_zlib_generic(filepath, extract_dir, self.zlib_window_size),
             )
         except shutil.RegistryError:
             pass
@@ -141,7 +148,7 @@ class Decompressor:
             shutil.register_unpack_format(
                 "deflate",
                 [".deflate"],
-                lambda filepath, extract_dir: unpack_deflate(filepath, extract_dir, self.zlib_window_size),
+                lambda filepath, extract_dir: unpack_zlib_generic(filepath, extract_dir, self.zlib_window_size),
                 description="Deflate compressed file",
             )
         except shutil.RegistryError:
